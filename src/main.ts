@@ -145,6 +145,7 @@ export default class ImageCaptions extends Plugin {
    * @param captionText
    * @param sourcePath
    */
+   /*
   async insertFigureWithCaption (imageEl: HTMLElement, outerEl: HTMLElement | Element, captionText: string, sourcePath: string) {
     const figure = outerEl.createEl('figure')
     figure.addClass('image-captions-figure')
@@ -153,6 +154,65 @@ export default class ImageCaptions extends Plugin {
     figure.createEl('figcaption', {
       cls: 'image-captions-caption'
     }).replaceChildren(...children)
+  }
+  */
+
+  /**
+  * Replace the original <img> (or <a> wrapping the <img>) element with a <figure>
+  * containing a clickable image and a standalone caption.
+  *
+  * @example
+  * <figure class="image-captions-figure">
+  *   <a href="http://lien/externe.html">
+  *     <img src="une-image.jpg" width="200" alt="une-image">
+  *   </a>
+  *   <figcaption class="image-captions-caption">une-image</figcaption>
+  * </figure>
+  *
+  * - If `outerEl` is an <a> with an `href`, that href is transferred to a
+  *   new inner <a> wrapping only the image, and the original <a> is replaced
+  *   by the <figure>.
+  * - Otherwise, the <figure> is inserted as before, without link logic.
+  *
+  * @param {HTMLElement} imageEl      - The original <img> element to move into the <figure>.
+  * @param {HTMLElement} outerEl      - The element that currently contains the image,
+  *                                     either the <a> wrapper or its parent container.
+  * @param {string}      captionText  - The text (or markdown) to render as the <figcaption>.
+  * @param {string}      sourcePath   - The markdown source path, for rendering context.
+  */
+  async insertFigureWithCaption(
+    imageEl: HTMLElement,
+    outerEl: HTMLElement,
+    captionText: string,
+    sourcePath: string
+  ) {
+    const isLink = outerEl.tagName === "A";
+    // Si l'image est déjà dans un <a>, on veut récupérer son href
+    const href = isLink ? outerEl.getAttribute("href") || "" : "";
+
+    // Crée le <figure> (même à l’intérieur de <a> pour faciliter le replaceWith)
+    const figure = outerEl.createEl("figure");
+    figure.addClass("image-captions-figure");
+
+    if (isLink && href) {
+      // On recrée un <a> ne contenant que l'image
+      const link = figure.createEl("a", { href });
+      link.appendChild(imageEl);
+    } else {
+      // Comportement normal : on met l'image directement dans le figure
+      figure.appendChild(imageEl);
+    }
+
+    // Génère la légende
+    const children = await renderMarkdown(captionText, sourcePath, this) ?? [captionText];
+    figure.createEl("figcaption", { cls: "image-captions-caption" })
+          .replaceChildren(...children);
+
+    // Si parent initial était un <a>, on remplace ce <a> par notre <figure>
+    if (isLink) {
+      outerEl.replaceWith(figure);
+    }
+    // Sinon, le <figure> reste appendu à outerEl comme avant.
   }
 
   async loadSettings () {
